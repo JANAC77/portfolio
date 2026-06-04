@@ -10,25 +10,42 @@ export default function ContactForm() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name || !form.email || !form.message) return;
 
     setStatus('sending');
 
-    // Simulate sending message
-    setTimeout(() => {
-      setStatus('success');
-      // Success explosion of confetti!
-      confetti({
-        particleCount: 80,
-        spread: 60,
-        origin: { y: 0.8 },
-        colors: ['#00f0ff', '#bd00ff', '#0072ff', '#39ff14']
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(form),
       });
-      // Reset form
-      setForm({ name: '', email: '', message: '' });
-    }, 1500);
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        setStatus('success');
+        // Success explosion of confetti!
+        confetti({
+          particleCount: 80,
+          spread: 60,
+          origin: { y: 0.8 },
+          colors: ['#00f0ff', '#bd00ff', '#0072ff', '#39ff14']
+        });
+        // Reset form
+        setForm({ name: '', email: '', message: '' });
+      } else {
+        console.error('Mail dispatch error:', data.error);
+        setStatus('error');
+      }
+    } catch (error) {
+      console.error('Failed to submit contact form:', error);
+      setStatus('error');
+    }
   };
 
   return (
@@ -60,6 +77,11 @@ export default function ContactForm() {
           </div>
         ) : (
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {status === 'error' && (
+              <div style={{ color: '#ff5f56', background: 'rgba(255, 95, 86, 0.1)', border: '1px solid rgba(255, 95, 86, 0.3)', padding: '12px', borderRadius: '6px', fontSize: '0.85rem' }}>
+                <strong>SYSTEM_ERROR:</strong> Message dispatch failed. Please verify your SMTP credentials on Vercel or retry.
+              </div>
+            )}
             <div>
               <label htmlFor="form-name" className="form-label">IDENTITY / NAME</label>
               <input
